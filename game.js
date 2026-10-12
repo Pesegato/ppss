@@ -78,6 +78,10 @@
   await app.init({ width: W, height: H, background: 0x03030c, antialias: true });
   document.getElementById('stage').appendChild(app.canvas);
 
+  // Caricamento texture PNG
+  const shipTex = await PIXI.Assets.load('assets/ppss.png');
+  const slugTex = await PIXI.Assets.load('assets/slug.png');
+
   const bg = new PIXI.Container(), world = new PIXI.Container(), ui = new PIXI.Container();
   app.stage.addChild(bg, world, ui);
 
@@ -161,13 +165,18 @@
     }
     q.sort((a, b) => a.time - b.time);
 
-    const g = new PIXI.Graphics()
-      .poly([22, 0, -14, -13, -8, 0, -14, 13]).fill(0x66e0ff)
-      .rect(-18, -3, 6, 6).fill(0xff9d3c);
-    world.addChild(g);
-    pl = { g, x: 90, y: H / 2, cd: 0, inv: 0 };
-    g.position.set(pl.x, pl.y);
-    st = 'play';
+
+  const g = new PIXI.Sprite(shipTex);
+  g.anchor.set(0.5); // Centra il perno dello sprite
+  
+  // Opzionale: scala la nave se è troppo grande/piccola (ad es. larghezza ~48px)
+  const shipTargetW = 48;
+  const shipScale = shipTargetW / shipTex.width;
+  g.scale.set(shipScale);
+  world.addChild(g);
+  pl = { g, x: 90, y: H / 2, cd: 0, inv: 0 };
+  g.position.set(pl.x, pl.y);
+  st = 'play';
   }
 
   function mkB(list, x, y, vx, vy, c, r) {
@@ -178,11 +187,21 @@
   }
 
   function spawn(d) {
-    const boss = /^BOSS/i.test(d.name), r = boss ? 44 : 16;
-    const g = new PIXI.Graphics()
-      .circle(0, 0, r).fill(col(d.name))
-      .circle(-r * .3, 0, r * .3).fill(0x10101a);
-    if (boss) g.rect(-r - 8, -6, 12, 12).fill(0xffffff);
+    const boss = /^BOSS/i.test(d.name);
+    const r = boss ? 44 : 20;
+
+    // Sprite slug
+    const g = new PIXI.Sprite(slugTex);
+    g.anchor.set(0.5); // Centra il perno
+
+    // Dimensionamento: r * 2 di larghezza/altezza
+    const targetSize = r * 2.2;
+    g.width = targetSize;
+    g.height = targetSize;
+
+    // Se il nemico è una variante colorata (es. BOSS1GREEN, Slug_shell, ecc.)
+    // possiamo applicare una tinta (tint) allo sprite:
+    g.tint = col(d.name);
 
     // 0 = basso, 1 = alto -> H * (1 - startPos)
     const y0 = H * (1 - d.startPos);
